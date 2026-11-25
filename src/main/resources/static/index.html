@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>settlement-matcher · 정산 대사</title>
+  <style>
+    body { font-family: "Malgun Gothic", system-ui, sans-serif; max-width: 640px; margin: 48px auto; padding: 0 16px; line-height: 1.6; color: #222; }
+    h1 { font-size: 1.5rem; margin-bottom: .25rem; }
+    .sub { color: #666; margin-top: 0; }
+    form { border: 1px solid #ddd; border-radius: 8px; padding: 20px; }
+    label { display: block; font-weight: 600; margin-top: 12px; }
+    input[type=file] { margin-top: 4px; }
+    button { margin-top: 20px; padding: 8px 20px; font-size: 1rem; cursor: pointer; }
+    .note { color: #666; font-size: .9rem; margin-top: 16px; }
+  </style>
+</head>
+<body>
+  <h1>정산 대사</h1>
+  <p class="sub">은행 거래내역과 매출 장부를 비교해 일치 / 불일치 / 검토 필요로 나눈 엑셀 파일을 만듭니다.</p>
+
+  <form action="/match" method="post" enctype="multipart/form-data">
+    <label for="bank">은행 거래내역 (.csv, .xlsx, .xls)</label>
+    <input id="bank" name="bank" type="file" accept=".csv,.xlsx,.xls" required>
+
+    <label for="ledger">매출 장부 (.csv, .xlsx, .xls)</label>
+    <input id="ledger" name="ledger" type="file" accept=".csv,.xlsx,.xls" required>
+
+    <button type="submit">대사 실행 후 결과 엑셀 받기</button>
+  </form>
+
+  <p class="note">
+    이 프로그램은 이 PC 안에서만 실행됩니다. 올린 파일은 저장하지 않고 결과를 만드는 동안에만 사용합니다.<br>
+    결과는 사람이 확인하기 위한 자료이며, 장부를 자동으로 확정하지 않습니다.
+  </p>
+</body>
+</html>

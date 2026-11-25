@@ -1,0 +1,43 @@
+server:
+  # 고객 PC 안에서만 접속되도록 localhost에만 연다.
+  address: 127.0.0.1
+  port: 8080
+
+spring:
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 40MB
+      # 업로드 파일을 임시 폴더에 쓰지 않고 메모리에서만 처리한다.
+      file-size-threshold: 20MB
+
+matcher:
+  # 날짜 허용 범위: 은행 거래일과 장부 매출일의 차이 (±일)
+  date-tolerance-days: 1
+  # 수수료 허용 비율: 입금액이 장부 금액보다 적을 때, 차이가 장부 금액 × 이 비율 이하면 일치 (0.005 = 0.5%)
+  fee-tolerance-rate: 0.005
+  # 부분 일치를 인정할 최소 글자 수 (정규화 후 짧은 쪽 이름 기준)
+  min-partial-name-length: 3
+  # 적요에 이 단어가 들어 있는 입금은 비매출로 보고 '검토 필요'로 보낸다.
+  non-sales-memo-keywords:
+    - 이자
+  # 거래처명 비교 전에 지우는 표기 (공백은 항상 지운다)
+  name-strip-tokens:
+    - "(주)"
+    - "㈜"
+    - "주식회사"
+    - "(유)"
+    - "유한회사"
+  # 은행 파일의 열 이름. 은행이 바뀌면 여기만 바꾼다.
+  bank-columns:
+    date: 거래일자
+    memo: 적요
+    name: 입금자명
+    withdrawal: 출금액
+    deposit: 입금액
+  # 매출 장부 파일의 열 이름
+  ledger-columns:
+    id: 전표번호
+    date: 매출일자
+    name: 거래처명
+    amount: 합계금액
