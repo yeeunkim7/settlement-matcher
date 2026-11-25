@@ -25,6 +25,7 @@ import com.settlementmatcher.domain.MatchResult;
 import com.settlementmatcher.io.ResultWorkbookWriter;
 import com.settlementmatcher.io.ResultWorkbookWriter.Source;
 import com.settlementmatcher.io.RowParser;
+import com.settlementmatcher.io.RowParser.Parsed;
 import com.settlementmatcher.io.TableReader;
 import com.settlementmatcher.match.SettlementMatcher;
 
@@ -49,13 +50,13 @@ public class MatchController {
         List<List<String>> bankRows = TableReader.read(bankFile.getOriginalFilename(), bankFile.getBytes());
         List<List<String>> ledgerRows = TableReader.read(ledgerFile.getOriginalFilename(), ledgerFile.getBytes());
 
-        List<BankTxn> bank = RowParser.parseBank(bankRows, props.bankColumns());
-        List<LedgerEntry> ledger = RowParser.parseLedger(ledgerRows, props.ledgerColumns());
-        MatchResult result = matcher.match(bank, ledger);
+        Parsed<BankTxn> bank = RowParser.parseBank(bankRows, props.bankColumns(), props.skipRowKeywords());
+        Parsed<LedgerEntry> ledger = RowParser.parseLedger(ledgerRows, props.ledgerColumns(), props.skipRowKeywords());
+        MatchResult result = matcher.match(bank.items(), ledger.items());
 
         byte[] xlsx = ResultWorkbookWriter.write(result,
-                new Source(bankFile.getOriginalFilename(), bankRows),
-                new Source(ledgerFile.getOriginalFilename(), ledgerRows));
+                new Source(bankFile.getOriginalFilename(), bankRows, bank.dataRows(), bank.skippedRows()),
+                new Source(ledgerFile.getOriginalFilename(), ledgerRows, ledger.dataRows(), ledger.skippedRows()));
 
         String name = "대사결과_" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")) + ".xlsx";
         return ResponseEntity.ok()

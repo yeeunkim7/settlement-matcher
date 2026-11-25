@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -19,11 +18,15 @@ import com.settlementmatcher.domain.LedgerEntry;
 import com.settlementmatcher.domain.MatchResult;
 import com.settlementmatcher.domain.MatchResult.Flagged;
 import com.settlementmatcher.io.RowParser;
+import com.settlementmatcher.io.RowParser.Parsed;
 import com.settlementmatcher.io.TableReader;
 
 /** samples/README.md의 '케이스별 예상 결과'를 application.yml 기본 설정으로 검증한다. */
 @SpringBootTest
 class SampleDataMatchTest {
+
+    static final String BANK_CSV = "가상데이터_은행거래내역_2026-10.csv";
+    static final String LEDGER_CSV = "가상데이터_매출장부_2026-10.csv";
 
     @Autowired
     MatcherProperties props;
@@ -31,24 +34,32 @@ class SampleDataMatchTest {
     SettlementMatcher matcher;
 
     MatchResult result;
-    List<BankTxn> bank;
-    List<LedgerEntry> ledger;
+    Parsed<BankTxn> bank;
+    Parsed<LedgerEntry> ledger;
 
     @BeforeEach
     void run() throws Exception {
-        Path bankPath = Path.of("samples", "가상데이터_은행거래내역_2026-10.csv");
-        Path ledgerPath = Path.of("samples", "가상데이터_매출장부_2026-10.csv");
-        bank = RowParser.parseBank(TableReader.read(bankPath.toString(), Files.readAllBytes(bankPath)),
-                props.bankColumns());
-        ledger = RowParser.parseLedger(TableReader.read(ledgerPath.toString(), Files.readAllBytes(ledgerPath)),
-                props.ledgerColumns());
-        result = matcher.match(bank, ledger);
+        bank = parseBank(BANK_CSV);
+        ledger = parseLedger(LEDGER_CSV);
+        result = matcher.match(bank.items(), ledger.items());
+    }
+
+    Parsed<BankTxn> parseBank(String file) throws Exception {
+        Path p = Path.of("samples", file);
+        return RowParser.parseBank(TableReader.read(file, Files.readAllBytes(p)), props.bankColumns(),
+                props.skipRowKeywords());
+    }
+
+    Parsed<LedgerEntry> parseLedger(String file) throws Exception {
+        Path p = Path.of("samples", file);
+        return RowParser.parseLedger(TableReader.read(file, Files.readAllBytes(p)), props.ledgerColumns(),
+                props.skipRowKeywords());
     }
 
     @Test
     void 모든_행이_한_곳에만_분류된다() {
-        assertThat(bank).hasSize(25);
-        assertThat(ledger).hasSize(24);
+        assertThat(bank.items()).hasSize(26);
+        assertThat(ledger.items()).hasSize(25);
         assertThat(result.excludedWithdrawals()).isEqualTo(2);
 
         long ledgerCount = result.matched().size()
@@ -58,15 +69,24 @@ class SampleDataMatchTest {
                 + result.unmatched().stream().filter(Flagged::isBank).count()
                 + result.review().stream().filter(Flagged::isBank).count()
                 + result.excludedWithdrawals();
-        assertThat(ledgerCount).isEqualTo(24);
-        assertThat(bankCount).isEqualTo(25);
+        assertThat(ledgerCount).isEqualTo(25);
+        assertThat(bankCount).isEqualTo(26);
     }
 
     @Test
     void 일치() {
         assertThat(result.matched()).extracting(p -> p.ledger().id()).containsExactlyInAnyOrder(
                 "L001", "L002", "L003", "L004", "L005", "L007", "L012", "L013", "L014", "L015", "L018", "L019",
-                "L022");
+                "L022", "L025");
+    }
+
+    @Test
+    void 두_글자_상호도_정규화_후_완전히_같으면_일치() {
+        assertThat(result.matched()).filteredOn(p -> p.ledger().id().equals("L025")).singleElement()
+                .satisfies(p -> {
+                    assertThat(p.bank().name()).isEqualTo("가람");
+                    assertThat(p.note()).isEmpty();
+                });
     }
 
     @Test
@@ -105,5 +125,31 @@ class SampleDataMatchTest {
         assertThat(notes.get("L005")).isEqualTo("입금 +1일");
         assertThat(notes.get("L007")).isEqualTo("수수료 차감 추정 500원");
         assertThat(notes.get("L022")).isEqualTo("입금 -1일");
+    }
+
+    @Test
+    void xlsx_샘플은_CSV와_같은_행을_읽는다() throws Exception {
+        assertThat(parseBank("가상데이터_은행거래내역_2026-10.xlsx").items()).isEqualTo(bank.items());
+        assertThat(parseLedger("가상데이터_매출장부_2026-10.xlsx").items()).isEqualTo(ledger.items());
+    }
+
+    @Test
+    void 계좌정보_제목행과_합계행이_있는_xlsx도_끝까지_처리된다() throws Exception {
+        Parsed<BankTxn> withTitle = parseBank("가상데이터_은행거래내역_2026-10_계좌정보포함.xlsx");
+        // 제목 3줄 + 머리글 1줄 아래로 데이터 26행(5~30행), 31행이 합계
+        assertThat(withTitle.skippedRows()).containsExactly(31);
+        assertThat(withTitle.dataRows()).isEqualTo(27);
+        assertThat(withTitle.items()).hasSize(26);
+        // 행 번호만 3씩 밀리고 내용은 CSV와 같다
+        assertThat(withTitle.items()).extracting(b -> b.rowNo() - 3).containsExactlyElementsOf(
+                bank.items().stream().map(BankTxn::rowNo).toList());
+        assertThat(withTitle.items()).extracting(BankTxn::date, BankTxn::name, BankTxn::deposit)
+                .containsExactlyElementsOf(bank.items().stream()
+                        .map(b -> org.assertj.core.groups.Tuple.tuple(b.date(), b.name(), b.deposit())).toList());
+
+        MatchResult r = matcher.match(withTitle.items(), ledger.items());
+        assertThat(r.matched()).hasSameSizeAs(result.matched());
+        assertThat(r.unmatched()).hasSameSizeAs(result.unmatched());
+        assertThat(r.review()).hasSameSizeAs(result.review());
     }
 }

@@ -21,18 +21,24 @@ import com.settlementmatcher.domain.MatchResult;
 import com.settlementmatcher.domain.MatchResult.Flagged;
 import com.settlementmatcher.domain.MatchResult.MatchedPair;
 
-/** 대사 결과를 엑셀로 쓴다. 시트: 일치 / 불일치 / 검토 필요 / 원본. */
+/** 대사 결과를 엑셀로 쓴다. 시트: 요약 / 일치 / 불일치 / 검토 필요 / 원본. */
 public final class ResultWorkbookWriter {
 
     private ResultWorkbookWriter() {
     }
 
-    public record Source(String filename, List<List<String>> rows) {
+    /**
+     * @param rows        파일에서 읽은 표 전체(원본 시트에 그대로 옮김)
+     * @param dataRows    머리글 아래의 비어 있지 않은 행 수
+     * @param skippedRows 키워드로 건너뛴 행 번호
+     */
+    public record Source(String filename, List<List<String>> rows, int dataRows, List<Integer> skippedRows) {
     }
 
     public static byte[] write(MatchResult result, Source bank, Source ledger) throws IOException {
         try (XSSFWorkbook wb = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Styles st = new Styles(wb);
+            writeSummary(wb.createSheet("요약"), st, result, bank, ledger);
             writeMatched(wb.createSheet("일치"), st, result.matched());
             writeFlagged(wb.createSheet("불일치"), st, result.unmatched(), false);
             writeFlagged(wb.createSheet("검토 필요"), st, result.review(), true);
@@ -40,6 +46,55 @@ public final class ResultWorkbookWriter {
             wb.write(out);
             return out.toByteArray();
         }
+    }
+
+    /** 은행·장부별 건수. 각 열에서 일치+불일치+검토 필요+제외+건너뜀 = 원본 데이터 행. */
+    private static void writeSummary(Sheet sh, Styles st, MatchResult result, Source bank, Source ledger) {
+        header(sh, st, new String[] {"구분", "은행 거래내역", "매출 장부"}, new int[] {34, 40, 40});
+        int matched = result.matched().size();
+        long bankUnmatched = result.unmatched().stream().filter(Flagged::isBank).count();
+        long ledgerUnmatched = result.unmatched().size() - bankUnmatched;
+        long bankReview = result.review().stream().filter(Flagged::isBank).count();
+        long ledgerReview = result.review().size() - bankReview;
+        int excluded = result.excludedWithdrawals();
+        int bankSkipped = bank.skippedRows().size();
+        int ledgerSkipped = ledger.skippedRows().size();
+        long bankSum = matched + bankUnmatched + bankReview + excluded + bankSkipped;
+        long ledgerSum = matched + ledgerUnmatched + ledgerReview + ledgerSkipped;
+
+        int r = 1;
+        summaryText(sh, st, r++, "파일", bank.filename(), ledger.filename());
+        summaryNum(sh, st, r++, "일치", matched, matched);
+        summaryNum(sh, st, r++, "불일치", bankUnmatched, ledgerUnmatched);
+        summaryNum(sh, st, r++, "검토 필요", bankReview, ledgerReview);
+        Row ex = sh.createRow(r++);
+        text(ex, 0, "제외 (출금)", st.text);
+        num(ex, 1, excluded, st.amount);
+        text(ex, 2, "-", st.text);
+        summaryNum(sh, st, r++, "건너뜀 (합계 등 키워드 행)", bankSkipped, ledgerSkipped);
+        summaryNum(sh, st, r++, "합계", bankSum, ledgerSum);
+        summaryNum(sh, st, r++, "원본 데이터 행 (머리글 아래, 빈 행 제외)", bank.dataRows(), ledger.dataRows());
+        summaryText(sh, st, r++, "검산 (합계 = 원본 데이터 행)",
+                bankSum == bank.dataRows() ? "맞음" : "안 맞음", ledgerSum == ledger.dataRows() ? "맞음" : "안 맞음");
+        summaryText(sh, st, r++, "건너뛴 행 번호", joinRows(bank.skippedRows()), joinRows(ledger.skippedRows()));
+    }
+
+    private static void summaryNum(Sheet sh, Styles st, int r, String label, long bank, long ledger) {
+        Row row = sh.createRow(r);
+        text(row, 0, label, st.text);
+        num(row, 1, bank, st.amount);
+        num(row, 2, ledger, st.amount);
+    }
+
+    private static void summaryText(Sheet sh, Styles st, int r, String label, String bank, String ledger) {
+        Row row = sh.createRow(r);
+        text(row, 0, label, st.text);
+        text(row, 1, bank, st.text);
+        text(row, 2, ledger, st.text);
+    }
+
+    private static String joinRows(List<Integer> rows) {
+        return rows.isEmpty() ? "-" : rows.stream().map(String::valueOf).collect(java.util.stream.Collectors.joining(", "));
     }
 
     private static void writeMatched(Sheet sh, Styles st, List<MatchedPair> pairs) {

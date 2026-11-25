@@ -13,12 +13,14 @@ public record MatcherProperties(
         int minPartialNameLength,
         List<String> nonSalesMemoKeywords,
         List<String> nameStripTokens,
+        List<String> skipRowKeywords,
         BankColumns bankColumns,
         LedgerColumns ledgerColumns) {
 
     public MatcherProperties {
         nonSalesMemoKeywords = nonSalesMemoKeywords == null ? List.of() : List.copyOf(nonSalesMemoKeywords);
         nameStripTokens = nameStripTokens == null ? List.of() : List.copyOf(nameStripTokens);
+        skipRowKeywords = skipRowKeywords == null ? List.of() : List.copyOf(skipRowKeywords);
     }
 
     public record BankColumns(String date, String memo, String name, String withdrawal, String deposit) {
