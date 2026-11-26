@@ -82,13 +82,28 @@ settlement-matcher-0.0.1├─ 실행.bat                  더블클릭하면 �
 
 ### 납품 전 확인 (2026-11-26, 0.0.1에서 한 것)
 
+#### 1차: 환경 변수로 Java를 가린 상태
+
 zip을 탐색기 방식(Shell.Application)으로 **한글과 공백이 있는 폴더**에 풀고, `JAVA_HOME=C:\no-such-java`, `PATH=C:\Windows\System32;C:\Windows`(`where java` → 없음), `JAVA_TOOL_OPTIONS=-Xmx1k`, `JDK_JAVA_OPTIONS=--no-such-option`으로 만든 뒤 실행.bat을 실행했습니다.
 
 - 실행 중인 프로세스의 `java.exe`와 불러온 `jvm.dll`이 모두 압축을 푼 폴더의 `runtime\` 아래였고, 로그에 `Picked up …`(환경 변수 옵션을 읽었다는 표시)이 없었습니다.
 - 그 상태로 샘플 3세트(CSV, xlsx, 계좌정보 포함 xlsx)와 CP949로 바꾼 은행 CSV를 올려 모두 일치 14 · 불일치 13 · 검토 필요 8, 검산 맞음을 확인했습니다.
 - 위 포트 표의 세 경우와, 8080이 막힌 상태에서 바깥 `application.yml`의 `server.port`만 8081로 바꿔 8081로 뜨는 것까지 확인했습니다.
 
-한계: 개발 PC에는 Java가 설치되어 있어 "Java가 전혀 없는 PC"를 완전히 재현하지는 못했습니다. 처음 납품할 때는 Java가 없는 PC나 Windows 샌드박스에서 한 번 실행해 보는 것을 권합니다.
+#### 2차: Java를 실제로 제거한 상태 (커밋 `1c3ccfc`로 만든 zip)
+
+테스트 환경: Windows 11 Home 개발 PC 한 대. 설치되어 있던 Java(JDK)를 모두 제거한 뒤 시험했습니다. (Windows 11 Home에는 Windows 샌드박스가 없음)
+
+- 제거 확인 (레지스트리의 PATH·JAVA_HOME으로 새로 연 창 기준): `where java` → 없음, `java -version` → 인식할 수 없는 명령, `JAVA_HOME` 비어 있음, PATH에 Java 항목 없음, 설치되어 있던 JDK 폴더 없음.
+- 디스크에 다른 Java가 남아 있었지만 PATH와 `JAVA_HOME`에 없어 사용되지 않았습니다.
+- zip을 새 폴더에 풀고 실행.bat 실행: 실행 중인 프로세스의 실행 파일은 `runtime\bin\java.exe`, 불러온 JVM은 `runtime\bin\server\jvm.dll`로, 모두 압축을 푼 폴더 안이었습니다.
+- 샘플 5세트(CSV, xlsx, xls, 계좌정보 포함 xlsx, CP949 CSV) 모두 일치 14 · 불일치 13 · 검토 필요 8, 검산 맞음(계좌정보 포함 xlsx는 은행 27행).
+
+테스트하지 않은 것:
+
+- 다른 Windows 버전(Windows 10, Pro 등)
+- 회사 PC의 백신·보안 프로그램
+- 인터넷이나 메일로 받은 zip을 풀었을 때 뜨는 보안 경고 창
 
 ## 핵심 코드 경로
 
