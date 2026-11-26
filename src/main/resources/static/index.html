@@ -2,36 +2,680 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>settlement-matcher · 정산 대사</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <title>정산 대사</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%233182F6'/%3E%3Cpath d='M9 16.5l4.5 4.5L23 11.5' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
   <style>
-    body { font-family: "Malgun Gothic", system-ui, sans-serif; max-width: 640px; margin: 48px auto; padding: 0 16px; line-height: 1.6; color: #222; }
-    h1 { font-size: 1.5rem; margin-bottom: .25rem; }
-    .sub { color: #666; margin-top: 0; }
-    form { border: 1px solid #ddd; border-radius: 8px; padding: 20px; }
-    label { display: block; font-weight: 600; margin-top: 12px; }
-    input[type=file] { margin-top: 4px; }
-    button { margin-top: 20px; padding: 8px 20px; font-size: 1rem; cursor: pointer; }
-    .note { color: #666; font-size: .9rem; margin-top: 16px; }
+    :root {
+      --bg: #ffffff;
+      --surface: #f9fafb;
+      --surface-2: #f2f4f6;
+      --line: #e5e8eb;
+      --text: #191f28;
+      --text-2: #4e5968;
+      --text-3: #8b95a1;
+      --blue: #3182f6;
+      --blue-press: #1b64da;
+      --blue-soft: #e8f3ff;
+      --red: #f04452;
+      --red-soft: #ffeeee;
+      --orange: #fe9800;
+      --orange-soft: #fff3e0;
+      --green: #03b26c;
+      --green-soft: #e5f8ef;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .04), 0 8px 24px rgba(0, 0, 0, .06);
+      --radius: 20px;
+      --ease: cubic-bezier(.2, .8, .2, 1);
+      color-scheme: light;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #101013;
+        --surface: #1c1c21;
+        --surface-2: #26262c;
+        --line: #2f2f36;
+        --text: #f2f3f5;
+        --text-2: #b0b8c1;
+        --text-3: #7e8691;
+        --blue: #4a94ff;
+        --blue-press: #6aa8ff;
+        --blue-soft: rgba(74, 148, 255, .16);
+        --red: #ff5c69;
+        --red-soft: rgba(255, 92, 105, .14);
+        --orange: #ffa827;
+        --orange-soft: rgba(255, 168, 39, .14);
+        --green: #2bcf8a;
+        --green-soft: rgba(43, 207, 138, .14);
+        --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .3);
+        color-scheme: dark;
+      }
+    }
+
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
+        "Malgun Gothic", "맑은 고딕", system-ui, sans-serif;
+      font-size: 16px;
+      line-height: 1.5;
+      word-break: keep-all;
+      -webkit-font-smoothing: antialiased;
+    }
+    button { font: inherit; color: inherit; }
+    .num { font-variant-numeric: tabular-nums; }
+    .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+    .app { max-width: 600px; margin: 0 auto; padding: 24px 24px 140px; min-height: 100vh; }
+
+    /* 상단 */
+    .topbar { display: flex; align-items: center; gap: 10px; height: 44px; margin-bottom: 40px; }
+    .logo { width: 28px; height: 28px; border-radius: 8px; background: var(--blue); display: grid; place-items: center; flex: none; }
+    .logo svg { width: 16px; height: 16px; }
+    .brand { font-weight: 700; font-size: 17px; letter-spacing: -.01em; }
+    .topbar .back {
+      margin-left: auto; border: 0; background: none; color: var(--text-2); font-size: 15px; font-weight: 500;
+      padding: 8px 12px; border-radius: 10px; cursor: pointer;
+    }
+    .topbar .back:hover { background: var(--surface-2); }
+
+    h1 {
+      font-size: clamp(26px, 5.4vw, 32px); line-height: 1.35; letter-spacing: -.03em; font-weight: 700;
+      margin: 0 0 12px;
+    }
+    .lead { color: var(--text-2); font-size: 17px; margin: 0 0 36px; letter-spacing: -.01em; }
+    .eyebrow { color: var(--blue); font-weight: 600; font-size: 15px; margin: 0 0 10px; }
+
+    /* 뷰 전환 */
+    .view { animation: rise .5s var(--ease) both; }
+    .view[hidden], .dock[hidden], .more[hidden] { display: none; }
+    @keyframes rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+
+    /* 업로드 카드 */
+    .drops { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+    .drop {
+      position: relative; display: flex; align-items: center; gap: 16px;
+      padding: 20px; border-radius: var(--radius); background: var(--surface);
+      border: 1.5px solid transparent; cursor: pointer;
+      transition: background .2s var(--ease), border-color .2s var(--ease), transform .2s var(--ease);
+    }
+    .drop:hover { background: var(--surface-2); }
+    .drop:active { transform: scale(.985); }
+    .drop:focus-within { border-color: var(--blue); }
+    .drop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+    .drop.dragging { border-color: var(--blue); border-style: dashed; background: var(--blue-soft); }
+    .drop.filled { background: var(--bg); border-color: var(--line); }
+    .drop.filled:hover { background: var(--surface); }
+    .drop .icon {
+      width: 48px; height: 48px; border-radius: 14px; flex: none; display: grid; place-items: center;
+      background: var(--bg); color: var(--text-3); transition: background .25s, color .25s;
+    }
+    .drop.filled .icon { background: var(--blue-soft); color: var(--blue); }
+    .drop .icon svg { width: 24px; height: 24px; }
+    .drop .body { min-width: 0; flex: 1; }
+    .drop .title, .drop .desc { display: block; }
+    .drop .title { font-weight: 600; font-size: 17px; letter-spacing: -.01em; }
+    .drop .desc { color: var(--text-3); font-size: 14px; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .drop.filled .desc { color: var(--text-2); }
+    .drop .action {
+      flex: none; font-size: 14px; font-weight: 600; color: var(--blue); background: var(--blue-soft);
+      padding: 8px 14px; border-radius: 10px; position: relative; z-index: 1; pointer-events: none;
+    }
+    .drop.filled .action { color: var(--text-2); background: var(--surface-2); }
+    .drop .clear {
+      display: none; position: relative; z-index: 2; flex: none; width: 32px; height: 32px; border-radius: 50%;
+      border: 0; background: none; color: var(--text-3); cursor: pointer; place-items: center; margin-left: -8px;
+    }
+    .drop.filled .clear { display: grid; }
+    .drop .clear:hover { background: var(--surface-2); color: var(--text); }
+    .drop .clear svg { width: 18px; height: 18px; }
+
+    .hint { display: flex; gap: 8px; align-items: flex-start; color: var(--text-3); font-size: 14px; margin: 20px 4px 0; }
+    .hint svg { flex: none; width: 16px; height: 16px; margin-top: 2px; }
+
+    .alert {
+      display: flex; gap: 12px; align-items: flex-start; margin-top: 16px; padding: 16px 18px;
+      border-radius: 16px; background: var(--red-soft); color: var(--text); font-size: 15px;
+      animation: shake .4s var(--ease);
+    }
+    .alert[hidden] { display: none; }
+    .alert svg { flex: none; width: 20px; height: 20px; color: var(--red); margin-top: 1px; }
+    .alert strong { display: block; font-weight: 600; margin-bottom: 2px; }
+    .alert span { color: var(--text-2); }
+    @keyframes shake { 0%, 100% { transform: none; } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+
+    /* 하단 고정 버튼 */
+    .dock {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
+      padding: 16px 24px calc(20px + env(safe-area-inset-bottom));
+      background: linear-gradient(to top, var(--bg) 70%, transparent);
+    }
+    .dock-inner { max-width: 552px; margin: 0 auto; display: flex; gap: 8px; }
+    .btn {
+      flex: 1; height: 56px; border: 0; border-radius: 16px; font-size: 17px; font-weight: 600;
+      letter-spacing: -.01em; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      transition: background .2s var(--ease), transform .15s var(--ease), opacity .2s;
+    }
+    .btn:active:not(:disabled) { transform: scale(.98); }
+    .btn:focus-visible { outline: 3px solid var(--blue-soft); outline-offset: 2px; }
+    .btn-primary { background: var(--blue); color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: var(--blue-press); }
+    .btn-primary:disabled { opacity: .35; cursor: default; }
+    .btn-secondary { background: var(--surface-2); color: var(--text-2); flex: 0 0 auto; padding: 0 22px; }
+    .btn-secondary:hover { background: var(--line); }
+    .btn svg { width: 20px; height: 20px; }
+    .spinner {
+      width: 20px; height: 20px; border-radius: 50%; border: 2.5px solid rgba(255, 255, 255, .35);
+      border-top-color: #fff; animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .busy .drops { opacity: .5; pointer-events: none; transition: opacity .3s; }
+
+    /* 결과 */
+    .headline em { font-style: normal; color: var(--blue); }
+    .headline em.warn { color: var(--red); }
+
+    .bar { display: flex; height: 12px; border-radius: 6px; overflow: hidden; gap: 3px; margin: 8px 0 14px; background: var(--surface-2); }
+    .bar i { display: block; height: 100%; border-radius: 3px; transform-origin: left; animation: grow .9s var(--ease) both; }
+    @keyframes grow { from { transform: scaleX(0); } }
+    .c-match { background: var(--blue); }
+    .c-unmatch { background: var(--red); }
+    .c-review { background: var(--orange); }
+
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 24px 0 12px; }
+    .stat { padding: 18px 16px; border-radius: 18px; background: var(--surface); }
+    .stat .label { display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--text-2); font-weight: 500; }
+    .stat .label i { width: 8px; height: 8px; border-radius: 50%; }
+    .stat .value { font-size: 28px; font-weight: 700; letter-spacing: -.03em; margin-top: 6px; line-height: 1.2; }
+    .stat .value small { font-size: 16px; font-weight: 600; margin-left: 2px; color: var(--text-2); }
+    .stat .meta { font-size: 13px; color: var(--text-3); margin-top: 4px; }
+
+    .check {
+      display: flex; align-items: center; gap: 12px; padding: 16px 18px; border-radius: 18px;
+      background: var(--green-soft); font-size: 15px;
+    }
+    .check.bad { background: var(--red-soft); }
+    .check .dot { width: 28px; height: 28px; border-radius: 50%; flex: none; display: grid; place-items: center; background: var(--green); color: #fff; }
+    .check.bad .dot { background: var(--red); }
+    .check .dot svg { width: 16px; height: 16px; }
+    .check strong { font-weight: 600; }
+    .check span { color: var(--text-2); display: block; font-size: 14px; }
+
+    .section-title { font-size: 20px; font-weight: 700; letter-spacing: -.02em; margin: 44px 0 16px; }
+
+    .tabs {
+      display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; padding: 4px; gap: 4px;
+      background: var(--surface-2); border-radius: 14px; position: sticky; top: 8px; z-index: 5;
+    }
+    .tab {
+      border: 0; background: none; height: 40px; border-radius: 10px; font-size: 15px; font-weight: 600;
+      color: var(--text-3); cursor: pointer; transition: background .2s, color .2s, box-shadow .2s;
+    }
+    .tab .n { margin-left: 4px; font-weight: 500; }
+    .tab[aria-selected="true"] { background: var(--bg); color: var(--text); box-shadow: 0 1px 3px rgba(0, 0, 0, .08); }
+    .tab:focus-visible { outline: 2px solid var(--blue); }
+
+    .list { margin-top: 8px; }
+    .row { display: flex; gap: 14px; padding: 18px 4px; border-bottom: 1px solid var(--line); animation: rise .4s var(--ease) both; }
+    .row:last-child { border-bottom: 0; }
+    .chip {
+      flex: none; align-self: flex-start; margin-top: 1px; font-size: 12px; font-weight: 600;
+      padding: 3px 8px; border-radius: 6px; background: var(--surface-2); color: var(--text-2);
+    }
+    .chip.bank { background: var(--blue-soft); color: var(--blue); }
+    .row .main { flex: 1; min-width: 0; }
+    .row .top { display: flex; align-items: baseline; gap: 12px; }
+    .row .name { font-weight: 600; font-size: 16px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .row .amount { font-weight: 700; font-size: 16px; white-space: nowrap; letter-spacing: -.01em; }
+    .row .sub { color: var(--text-3); font-size: 14px; margin-top: 2px; }
+    .row .reason { display: flex; gap: 6px; align-items: flex-start; font-size: 14px; color: var(--text-2); margin-top: 8px; }
+    .row .reason i { flex: none; width: 6px; height: 6px; border-radius: 50%; margin-top: 8px; }
+    .row .pair-arrow { color: var(--text-3); margin: 0 4px; }
+
+    .group { border-radius: 18px; background: var(--surface); padding: 6px 16px; margin-top: 12px; }
+    .group-head { font-size: 13px; font-weight: 600; color: var(--orange); padding: 12px 4px 0; }
+    .group .row { border-bottom-color: var(--line); }
+
+    .empty { text-align: center; padding: 56px 16px; color: var(--text-3); }
+    .empty .big { width: 56px; height: 56px; border-radius: 50%; margin: 0 auto 14px; background: var(--green-soft); color: var(--green); display: grid; place-items: center; }
+    .empty .big svg { width: 28px; height: 28px; }
+    .empty strong { display: block; color: var(--text); font-size: 17px; margin-bottom: 4px; }
+
+    .more { display: block; width: 100%; margin-top: 8px; height: 48px; border: 0; border-radius: 14px; background: var(--surface); color: var(--text-2); font-weight: 600; cursor: pointer; }
+    .more:hover { background: var(--surface-2); }
+
+    .foot { color: var(--text-3); font-size: 13px; margin-top: 32px; text-align: center; }
+
+    @media (max-width: 480px) {
+      .app { padding: 16px 20px 140px; }
+      .topbar { margin-bottom: 28px; }
+      .stats { grid-template-columns: 1fr 1fr; }
+      .stats .stat:first-child { grid-column: 1 / -1; }
+      .dock { padding-left: 20px; padding-right: 20px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+    }
   </style>
 </head>
 <body>
-  <h1>정산 대사</h1>
-  <p class="sub">은행 거래내역과 매출 장부를 비교해 일치 / 불일치 / 검토 필요로 나눈 엑셀 파일을 만듭니다.</p>
+<div class="app">
+  <header class="topbar">
+    <div class="logo" aria-hidden="true">
+      <svg viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"/></svg>
+    </div>
+    <span class="brand">정산 대사</span>
+    <button class="back" id="restart" type="button" hidden>처음으로</button>
+  </header>
 
-  <form action="/match" method="post" enctype="multipart/form-data">
-    <label for="bank">은행 거래내역 (.csv, .xlsx, .xls)</label>
-    <input id="bank" name="bank" type="file" accept=".csv,.xlsx,.xls" required>
+  <!-- 1. 업로드 -->
+  <section class="view" id="upload-view">
+    <h1>두 파일만 올리면<br>정산 대사가 끝나요</h1>
+    <p class="lead">은행 거래내역과 매출 장부를 비교해서 맞는 건, 안 맞는 건, 확인할 건으로 나눠 드릴게요.</p>
 
-    <label for="ledger">매출 장부 (.csv, .xlsx, .xls)</label>
-    <input id="ledger" name="ledger" type="file" accept=".csv,.xlsx,.xls" required>
+    <form id="form" action="/match" method="post" enctype="multipart/form-data">
+      <div class="drops">
+        <label class="drop" data-slot="bank">
+          <input id="bank" name="bank" type="file" accept=".csv,.xlsx,.xls" required>
+          <span class="icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-6 9 6"/><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8"/><path d="M3 20h18"/></svg>
+          </span>
+          <span class="body">
+            <span class="title">은행 거래내역</span>
+            <span class="desc" data-empty="CSV, XLSX, XLS 파일">CSV, XLSX, XLS 파일</span>
+          </span>
+          <span class="action" data-empty="파일 선택" data-filled="변경">파일 선택</span>
+          <button class="clear" type="button" aria-label="은행 거래내역 파일 지우기">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          </button>
+        </label>
 
-    <button type="submit">대사 실행 후 결과 엑셀 받기</button>
-  </form>
+        <label class="drop" data-slot="ledger">
+          <input id="ledger" name="ledger" type="file" accept=".csv,.xlsx,.xls" required>
+          <span class="icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5"/><path d="M9 12h7M9 16h7"/></svg>
+          </span>
+          <span class="body">
+            <span class="title">매출 장부</span>
+            <span class="desc" data-empty="CSV, XLSX, XLS 파일">CSV, XLSX, XLS 파일</span>
+          </span>
+          <span class="action" data-empty="파일 선택" data-filled="변경">파일 선택</span>
+          <button class="clear" type="button" aria-label="매출 장부 파일 지우기">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          </button>
+        </label>
+      </div>
 
-  <p class="note">
-    이 프로그램은 이 PC 안에서만 실행됩니다. 올린 파일은 저장하지 않고 결과를 만드는 동안에만 사용합니다.<br>
-    결과는 사람이 확인하기 위한 자료이며, 장부를 자동으로 확정하지 않습니다.
-  </p>
+      <div class="alert" id="error" role="alert" hidden>
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 5.5a1.2 1.2 0 011.2 1.2v4.1a1.2 1.2 0 01-2.4 0V8.7A1.2 1.2 0 0112 7.5zm0 10.3a1.35 1.35 0 110-2.7 1.35 1.35 0 010 2.7z"/></svg>
+        <div><strong>파일을 처리하지 못했어요</strong><span id="error-msg"></span></div>
+      </div>
+
+      <p class="hint">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg>
+        <span>파일은 이 PC 밖으로 나가지 않고, 어디에도 저장되지 않아요. 두 파일을 한 번에 끌어다 놓아도 돼요.</span>
+      </p>
+
+    </form>
+  </section>
+
+  <!-- 2. 결과 -->
+  <section class="view" id="result-view" hidden>
+    <p class="eyebrow">대사 완료</p>
+    <h1 class="headline" id="headline"></h1>
+
+    <div class="bar" id="bar" role="img"></div>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="label"><i class="c-match"></i>일치</div>
+        <div class="value num" id="s-match"></div>
+        <div class="meta num" id="s-match-meta"></div>
+      </div>
+      <div class="stat">
+        <div class="label"><i class="c-unmatch"></i>불일치</div>
+        <div class="value num" id="s-unmatch"></div>
+        <div class="meta num" id="s-unmatch-meta"></div>
+      </div>
+      <div class="stat">
+        <div class="label"><i class="c-review"></i>검토 필요</div>
+        <div class="value num" id="s-review"></div>
+        <div class="meta num" id="s-review-meta"></div>
+      </div>
+    </div>
+
+    <div class="check" id="check">
+      <span class="dot" aria-hidden="true"></span>
+      <div><strong id="check-title"></strong><span id="check-desc" class="num"></span></div>
+    </div>
+
+    <h2 class="section-title">항목별로 볼게요</h2>
+    <div class="tabs" role="tablist" id="tabs"></div>
+    <div class="list" id="list" role="tabpanel"></div>
+
+    <p class="foot">결과는 사람이 확인하기 위한 자료예요. 장부를 자동으로 확정하지 않아요.</p>
+
+    </div>
+  </section>
+
+  <div class="dock" id="upload-dock">
+    <div class="dock-inner">
+      <button class="btn btn-primary" id="submit" type="submit" form="form" disabled>대사 시작하기</button>
+    </div>
+  </div>
+    <div class="dock" id="result-dock" hidden>
+    <div class="dock-inner">
+      <button class="btn btn-secondary" id="again" type="button">새로 대사</button>
+      <button class="btn btn-primary" id="download" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10.5l5 5 5-5M5 20h14"/></svg>
+        결과 엑셀 받기
+      </button>
+    </div>
+</div>
+
+<script>
+(() => {
+  const $ = (s, el = document) => el.querySelector(s);
+  const won = n => new Intl.NumberFormat('ko-KR').format(n) + '원';
+  const count = n => new Intl.NumberFormat('ko-KR').format(n);
+  const MAX_BYTES = 20 * 1024 * 1024;
+  const OK_EXT = /\.(csv|xlsx|xls)$/i;
+
+  function h(tag, attrs = {}, ...kids) {
+    const el = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (v == null || v === false) continue;
+      if (k === 'class') el.className = v;
+      else if (k === 'style') el.style.cssText = v;
+      else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+      else el.setAttribute(k, v === true ? '' : v);
+    }
+    for (const kid of kids.flat()) if (kid != null && kid !== false) el.append(kid);
+    return el;
+  }
+  const svg = path => {
+    const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    s.setAttribute('viewBox', '0 0 24 24'); s.setAttribute('fill', 'none'); s.setAttribute('stroke', 'currentColor');
+    s.setAttribute('stroke-width', '2.4'); s.setAttribute('stroke-linecap', 'round'); s.setAttribute('stroke-linejoin', 'round');
+    s.innerHTML = path; return s;
+  };
+  const CHECK = '<path d="M5 12.5l4.5 4.5L19 7.5"/>';
+  const BANG = '<path d="M12 7v6M12 17h.01"/>';
+
+  // ---------- 업로드 ----------
+  const form = $('#form');
+  const submit = $('#submit');
+  const slots = {};
+  document.querySelectorAll('.drop').forEach(drop => {
+    const input = $('input', drop);
+    slots[drop.dataset.slot] = { drop, input };
+    input.addEventListener('change', () => render(drop.dataset.slot));
+    $('.clear', drop).addEventListener('click', e => {
+      e.preventDefault(); e.stopPropagation();
+      input.value = ''; render(drop.dataset.slot);
+    });
+    drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('dragging'); });
+    drop.addEventListener('dragleave', () => drop.classList.remove('dragging'));
+    drop.addEventListener('drop', e => {
+      e.preventDefault(); e.stopPropagation();
+      dragDepth = 0;
+      document.querySelectorAll('.drop').forEach(d => d.classList.remove('dragging'));
+      const files = [...e.dataTransfer.files];
+      if (files.length > 1) assignMany(files); else if (files[0]) assign(drop.dataset.slot, files[0]);
+    });
+  });
+
+  // 카드 밖에 놓아도 받는다. 두 파일이면 이름으로 은행/장부를 구분한다.
+  let dragDepth = 0;
+  window.addEventListener('dragenter', e => { e.preventDefault(); if (dragDepth++ === 0) highlightEmpty(true); });
+  window.addEventListener('dragleave', () => { if (--dragDepth <= 0) { dragDepth = 0; highlightEmpty(false); } });
+  window.addEventListener('dragover', e => e.preventDefault());
+  window.addEventListener('drop', e => {
+    e.preventDefault(); dragDepth = 0; highlightEmpty(false);
+    if (!$('#upload-view').hidden) assignMany([...e.dataTransfer.files]);
+  });
+  function highlightEmpty(on) {
+    if ($('#upload-view').hidden) return;
+    Object.values(slots).forEach(({ drop, input }) => drop.classList.toggle('dragging', on && !input.files.length));
+  }
+  function assignMany(files) {
+    assigned.clear();
+    const guess = f => /은행|bank|거래내역|입출금/i.test(f.name) ? 'bank' : /장부|매출|ledger|sales/i.test(f.name) ? 'ledger' : null;
+    const rest = [];
+    for (const f of files.slice(0, 2)) { const g = guess(f); g && !assigned.has(g) ? assign(g, f) : rest.push(f); }
+    for (const f of rest) { const free = ['bank', 'ledger'].find(k => !assigned.has(k)) ?? 'bank'; assign(free, f); }
+    assigned.clear();
+  }
+  const assigned = new Set();
+  function assign(slot, file) {
+    if (!OK_EXT.test(file.name)) return showError(`‘${file.name}’은(는) 열 수 없는 형식이에요. CSV, XLSX, XLS 파일을 올려주세요.`);
+    if (file.size > MAX_BYTES) return showError(`‘${file.name}’이(가) 20MB보다 커요. 파일을 나눠서 올려주세요.`);
+    const dt = new DataTransfer(); dt.items.add(file);
+    slots[slot].input.files = dt.files;
+    assigned.add(slot);
+    render(slot);
+  }
+
+  function render(slot) {
+    const { drop, input } = slots[slot];
+    const file = input.files[0];
+    if (file && file.size > MAX_BYTES) { input.value = ''; showError(`‘${file.name}’이(가) 20MB보다 커요.`); return render(slot); }
+    drop.classList.toggle('filled', !!file);
+    const desc = $('.desc', drop), action = $('.action', drop), icon = $('.icon', drop);
+    desc.textContent = file ? `${file.name} · ${size(file.size)}` : desc.dataset.empty;
+    desc.title = file ? file.name : '';
+    action.textContent = file ? action.dataset.filled : action.dataset.empty;
+    if (file) { icon.dataset.orig ??= icon.innerHTML; icon.replaceChildren(svg(CHECK)); }
+    else if (icon.dataset.orig) icon.innerHTML = icon.dataset.orig;
+    submit.disabled = !(slots.bank.input.files.length && slots.ledger.input.files.length);
+    hideError();
+  }
+  const size = b => b < 1024 ? `${b}B` : b < 1048576 ? `${(b / 1024).toFixed(0)}KB` : `${(b / 1048576).toFixed(1)}MB`;
+
+  function showError(msg) {
+    const box = $('#error');
+    $('#error-msg').textContent = msg;
+    box.hidden = true; void box.offsetWidth; box.hidden = false;
+  }
+  function hideError() { $('#error').hidden = true; }
+
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    if (submit.disabled) return;
+    hideError();
+    form.classList.add('busy');
+    submit.disabled = true;
+    submit.replaceChildren(h('span', { class: 'spinner', 'aria-hidden': 'true' }), '대사하는 중이에요');
+    try {
+      const res = await fetch('/api/match', { method: 'POST', body: new FormData(form) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || (res.status === 413 ? '파일이 너무 커요. 20MB 이하로 올려주세요.' : '잠시 후 다시 시도해 주세요.'));
+      showResult(data);
+    } catch (err) {
+      showError(err instanceof TypeError ? '프로그램이 실행 중인지 확인해 주세요.' : err.message);
+    } finally {
+      form.classList.remove('busy');
+      submit.textContent = '대사 시작하기';
+      submit.disabled = !(slots.bank.input.files.length && slots.ledger.input.files.length);
+    }
+  });
+
+  // ---------- 결과 ----------
+  let current = null, blobUrl = null;
+
+  function showResult(data) {
+    current = data;
+    const s = data.summary;
+    const attention = s.unmatched + s.review;
+
+    const hl = $('#headline');
+    hl.replaceChildren();
+    if (attention === 0) hl.append('모든 거래가', h('br'), h('em', {}, '딱 맞았어요'));
+    else if (s.matched === 0) hl.append('맞는 거래를 찾지 못했어요', h('br'), h('em', { class: 'warn' }, `${count(attention)}건`), '을 확인해 주세요');
+    else hl.append(h('em', {}, `${count(s.matched)}건`), '이 맞았고', h('br'), h('em', { class: 'warn' }, `${count(attention)}건`), '은 확인이 필요해요');
+
+    const total = s.matched + s.unmatched + s.review || 1;
+    const bar = $('#bar');
+    bar.replaceChildren(
+      ...[['c-match', s.matched], ['c-unmatch', s.unmatched], ['c-review', s.review]]
+        .filter(([, n]) => n > 0)
+        .map(([c, n], i) => h('i', { class: c, style: `flex:${n};animation-delay:${i * 80}ms` })));
+    bar.setAttribute('aria-label', `일치 ${s.matched}건, 불일치 ${s.unmatched}건, 검토 필요 ${s.review}건`);
+
+    tick($('#s-match'), s.matched);
+    tick($('#s-unmatch'), s.unmatched);
+    tick($('#s-review'), s.review);
+    $('#s-match-meta').textContent = won(s.matchedAmount);
+    $('#s-unmatch-meta').textContent = `은행 ${s.bank.unmatched} · 장부 ${s.ledger.unmatched}`;
+    $('#s-review-meta').textContent = `은행 ${s.bank.review} · 장부 ${s.ledger.review}`;
+
+    const balanced = s.bank.balanced && s.ledger.balanced;
+    $('#check').classList.toggle('bad', !balanced);
+    $('#check .dot').replaceChildren(svg(balanced ? CHECK : BANG));
+    $('#check-title').textContent = balanced ? '빠진 행 없이 모두 확인했어요' : '건수가 맞지 않는 파일이 있어요';
+    const skipped = (side) => side.skippedRows.length ? ` (합계 등 ${side.skippedRows.length}행 제외)` : '';
+    $('#check-desc').textContent =
+      `은행 ${count(s.bank.dataRows)}행${skipped(s.bank)}` +
+      (s.excludedWithdrawals ? ` · 출금 ${s.excludedWithdrawals}건 제외` : '') +
+      ` · 장부 ${count(s.ledger.dataRows)}행${skipped(s.ledger)}`;
+
+    const tabs = [
+      ['unmatched', '불일치', data.unmatched.length],
+      ['review', '검토 필요', data.review.length],
+      ['matched', '일치', data.matched.length],
+    ];
+    const first = tabs.find(t => t[2] > 0)?.[0] ?? 'unmatched';
+    $('#tabs').replaceChildren(...tabs.map(([key, label, n]) =>
+      h('button', { class: 'tab', role: 'tab', type: 'button', 'data-key': key, onclick: () => selectTab(key) },
+        label, h('span', { class: 'n num' }, n))));
+    selectTab(first);
+
+    if (blobUrl) URL.revokeObjectURL(blobUrl);
+    blobUrl = null;
+
+    $('#upload-view').hidden = true;
+    $('#upload-dock').hidden = true;
+    $('#result-view').hidden = false;
+    $('#result-dock').hidden = false;
+    $('#restart').hidden = false;
+    window.scrollTo({ top: 0 });
+    $('#download').focus({ preventScroll: true });
+  }
+
+  function tick(el, to) {
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const setVal = n => el.replaceChildren(count(n), h('small', {}, '건'));
+    if (reduce || to === 0) return setVal(to);
+    const start = performance.now(), dur = 700;
+    const step = t => {
+      const p = Math.min(1, (t - start) / dur);
+      setVal(Math.round(to * (1 - Math.pow(1 - p, 3))));
+      if (p < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+
+  const PAGE = 30;
+  function selectTab(key) {
+    document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.key === key)));
+    const list = $('#list');
+    list.replaceChildren();
+    const items = current[key];
+
+    if (!items.length) {
+      const msg = { unmatched: ['불일치 항목이 없어요', '모든 거래가 짝을 찾았어요.'],
+                    review: ['검토할 항목이 없어요', '애매한 거래 없이 깔끔하게 나뉘었어요.'],
+                    matched: ['일치한 항목이 없어요', '열 이름이나 날짜 형식을 확인해 주세요.'] }[key];
+      list.append(h('div', { class: 'empty' }, h('div', { class: 'big' }, svg(CHECK)), h('strong', {}, msg[0]), msg[1]));
+      return;
+    }
+
+    if (key === 'review') {
+      const groups = new Map();
+      items.forEach(it => { if (!groups.has(it.group)) groups.set(it.group, []); groups.get(it.group).push(it); });
+      let i = 0;
+      for (const [g, rows] of groups) {
+        list.append(h('div', { class: 'group', style: `animation-delay:${Math.min(i++, 10) * 30}ms` },
+          rows.length > 1 ? h('div', { class: 'group-head' }, `묶음 ${g} · 함께 확인하세요`) : null,
+          rows.map(it => flaggedRow(it, 'c-review'))));
+      }
+      return;
+    }
+
+    const make = key === 'matched' ? matchedRow : it => flaggedRow(it, 'c-unmatch');
+    let shown = 0;
+    const more = h('button', { class: 'more', type: 'button' });
+    const page = () => {
+      const next = items.slice(shown, shown + PAGE);
+      next.forEach((it, i) => { const r = make(it); r.style.animationDelay = `${Math.min(i, 10) * 25}ms`; more.before(r); });
+      shown += next.length;
+      more.hidden = shown >= items.length;
+      more.textContent = `${count(Math.min(PAGE, items.length - shown))}건 더 보기`;
+    };
+    more.addEventListener('click', page);
+    list.append(more);
+    page();
+  }
+
+  const md = d => d ? d.slice(5).replace('-', '.') : '날짜 없음';
+
+  function flaggedRow(it, color) {
+    const bank = it.side === 'bank';
+    const sub = [md(it.date), bank ? it.memo : it.id, `${it.rowNo}행`].filter(Boolean).join(' · ');
+    return h('div', { class: 'row' },
+      h('span', { class: `chip ${bank ? 'bank' : ''}` }, bank ? '은행' : '장부'),
+      h('div', { class: 'main' },
+        h('div', { class: 'top' },
+          h('span', { class: 'name' }, it.name || '(이름 없음)'),
+          h('span', { class: 'amount num' }, won(it.amount))),
+        h('div', { class: 'sub num' }, sub),
+        h('div', { class: 'reason' }, h('i', { class: color }), it.reason)));
+  }
+
+  function matchedRow(p) {
+    const notes = [];
+    if (p.dayDiff) notes.push(`날짜 ${p.dayDiff > 0 ? '+' : ''}${p.dayDiff}일`);
+    if (p.amountDiff) notes.push(`차액 ${won(p.amountDiff)}`);
+    if (p.note) notes.push(p.note);
+    return h('div', { class: 'row' },
+      h('span', { class: 'chip bank' }, '일치'),
+      h('div', { class: 'main' },
+        h('div', { class: 'top' },
+          h('span', { class: 'name' }, p.ledgerName || p.bankName),
+          h('span', { class: 'amount num' }, won(p.ledgerAmount))),
+        h('div', { class: 'sub num' },
+          `${md(p.bankDate)} 입금 ${p.bankName}`, h('span', { class: 'pair-arrow' }, '→'), `${p.ledgerId || ''} ${md(p.ledgerDate)}`),
+        notes.length ? h('div', { class: 'reason' }, h('i', { class: 'c-match' }), notes.join(' · ')) : null));
+  }
+
+  $('#download').addEventListener('click', () => {
+    if (!current) return;
+    if (!blobUrl) {
+      const bin = atob(current.xlsxBase64);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      blobUrl = URL.createObjectURL(new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+    }
+    const a = h('a', { href: blobUrl, download: current.fileName });
+    document.body.append(a); a.click(); a.remove();
+  });
+
+  function restart() {
+    form.reset();
+    Object.keys(slots).forEach(render);
+    $('#result-view').hidden = true;
+    $('#result-dock').hidden = true;
+    $('#upload-view').hidden = false;
+    $('#upload-dock').hidden = false;
+    $('#restart').hidden = true;
+    window.scrollTo({ top: 0 });
+  }
+  $('#again').addEventListener('click', restart);
+  $('#restart').addEventListener('click', restart);
+})();
+</script>
 </body>
 </html>

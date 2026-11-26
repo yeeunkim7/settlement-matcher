@@ -53,6 +53,25 @@ class MatchControllerTest {
         }
     }
 
+    @org.junit.jupiter.api.Test
+    void 화면용_JSON에_요약과_항목이_담긴다() throws Exception {
+        var res = controller.matchJson(upload("bank", "가상데이터_은행거래내역_2026-10.csv"),
+                upload("ledger", "가상데이터_매출장부_2026-10.csv"));
+
+        assertThat(res.summary().matched()).isEqualTo(14);
+        assertThat(res.summary().unmatched()).isEqualTo(13);
+        assertThat(res.summary().review()).isEqualTo(8);
+        assertThat(res.summary().bank().balanced()).isTrue();
+        assertThat(res.summary().ledger().balanced()).isTrue();
+        assertThat(res.unmatched()).hasSize(13);
+        assertThat(res.review()).hasSize(8);
+        assertThat(res.matched()).hasSize(14);
+        try (Workbook wb = WorkbookFactory.create(
+                new ByteArrayInputStream(java.util.Base64.getDecoder().decode(res.xlsxBase64())))) {
+            assertThat(sheetNames(wb)).containsExactly("요약", "일치", "불일치", "검토 필요", "원본");
+        }
+    }
+
     private static MockMultipartFile upload(String field, String file) throws Exception {
         return new MockMultipartFile(field, file, "application/octet-stream",
                 Files.readAllBytes(Path.of("samples", file)));
