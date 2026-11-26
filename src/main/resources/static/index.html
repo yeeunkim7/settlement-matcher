@@ -35,6 +35,8 @@
       --blue-soft: #e8f3ff;
       --red: #f04452;
       --red-soft: #ffeeee;
+      --red-line: rgba(240, 68, 82, .28);
+      --red-text: #c9252f;
       --orange: #fe9800;
       --orange-soft: #fff3e0;
       --green: #03b26c;
@@ -62,6 +64,8 @@
         --blue-soft: rgba(74, 148, 255, .16);
         --red: #ff5c69;
         --red-soft: rgba(255, 92, 105, .14);
+        --red-line: rgba(255, 92, 105, .4);
+        --red-text: #ff8a93;
         --orange: #ffa827;
         --orange-soft: rgba(255, 168, 39, .14);
         --green: #2bcf8a;
@@ -162,15 +166,16 @@
     .hint { display: flex; gap: 6px; align-items: flex-start; color: var(--gray-2); font-size: 13px; margin: 12px 0 0; }
     .hint svg { flex: none; width: 14px; height: 14px; margin-top: 2px; }
 
+    /* 오류 안내: 업로드 화면의 네 가지 색 규칙에서 예외로 빨간색 계열을 쓴다. */
     .alert {
       display: flex; gap: 10px; align-items: flex-start; margin-top: 12px; padding: 14px 16px;
-      border-radius: 12px; background: var(--gray-1); color: var(--ink);
+      border-radius: 12px; background: var(--red-soft); border: 1px solid var(--red-line); color: var(--ink);
       animation: shake .4s var(--ease);
     }
     .alert[hidden] { display: none; }
-    .alert svg { flex: none; width: 18px; height: 18px; color: var(--ink); margin-top: 1px; }
-    .alert strong { display: block; font-weight: 600; font-size: 15px; margin-bottom: 2px; }
-    .alert span { color: var(--gray-2); font-size: 13px; }
+    .alert svg { flex: none; width: 20px; height: 20px; color: var(--red); margin-top: 0; }
+    .alert strong { display: block; font-weight: 700; font-size: 15px; color: var(--red-text); margin-bottom: 2px; }
+    .alert span { color: var(--ink); font-size: 13px; }
     @keyframes shake { 0%, 100% { transform: none; } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
 
     /* 하단 고정 버튼 */
