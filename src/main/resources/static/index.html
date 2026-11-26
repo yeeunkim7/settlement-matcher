@@ -603,7 +603,9 @@
     const setVal = n => el.replaceChildren(count(n), h('small', {}, '건'));
     if (reduce || to === 0) return setVal(to);
     const start = performance.now(), dur = 700;
+    const run = current;
     const step = t => {
+      if (current !== run) return; // 그 사이 결과를 지웠으면 다시 그리지 않는다
       const p = Math.min(1, (t - start) / dur);
       setVal(Math.round(to * (1 - Math.pow(1 - p, 3))));
       if (p < 1) requestAnimationFrame(step);
@@ -696,7 +698,17 @@
     document.body.append(a); a.click(); a.remove();
   });
 
+  // 이전 결과를 브라우저 메모리에서 지운다: 응답 데이터, 엑셀 Blob, 결과 화면에 그려 둔 항목.
+  function clearResult() {
+    current = null;
+    if (blobUrl) URL.revokeObjectURL(blobUrl);
+    blobUrl = null;
+    ['#headline', '#bar', '#tabs', '#list', '#s-match', '#s-match-meta', '#s-unmatch', '#s-unmatch-meta',
+     '#s-review', '#s-review-meta', '#check-title', '#check-desc'].forEach(s => $(s).replaceChildren());
+  }
+
   function restart() {
+    clearResult();
     form.reset();
     Object.keys(slots).forEach(render);
     $('#result-view').hidden = true;
