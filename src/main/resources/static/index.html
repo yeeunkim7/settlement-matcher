@@ -6,8 +6,22 @@
   <meta name="color-scheme" content="light dark">
   <title>정산 대사</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%233182F6'/%3E%3Cpath d='M9 16.5l4.5 4.5L23 11.5' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="preload" href="/fonts/PretendardVariable.woff2" as="font" type="font/woff2" crossorigin>
   <style>
+    /* Pretendard v1.3.9 (SIL OFL 1.1, fonts/Pretendard-LICENSE.txt). 외부 주소 없이 이 앱에서만 제공한다. */
+    @font-face {
+      font-family: "Pretendard Variable";
+      src: url("/fonts/PretendardVariable.woff2") format("woff2-variations");
+      font-weight: 45 920;
+      font-style: normal;
+      font-display: swap;
+    }
     :root {
+      /* 업로드 화면 색: 글자 / 강조 / 회색 두 단계 */
+      --ink: #191f28;
+      --accent: #3182f6;
+      --gray-1: #f2f4f6;
+      --gray-2: #6b7684;
       --bg: #ffffff;
       --surface: #f9fafb;
       --surface-2: #f2f4f6;
@@ -31,6 +45,10 @@
     }
     @media (prefers-color-scheme: dark) {
       :root {
+        --ink: #f2f3f5;
+        --accent: #4a94ff;
+        --gray-1: #25262b;
+        --gray-2: #9aa3ad;
         --bg: #101013;
         --surface: #1c1c21;
         --surface-2: #26262c;
@@ -69,7 +87,7 @@
     .num { font-variant-numeric: tabular-nums; }
     .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
-    .app { max-width: 600px; margin: 0 auto; padding: 24px 24px 140px; min-height: 100vh; }
+    .app { max-width: 608px; margin: 0 auto; padding: 24px 24px 140px; min-height: 100vh; }
 
     /* 상단 */
     .topbar { display: flex; align-items: center; gap: 10px; height: 44px; margin-bottom: 40px; }
@@ -94,57 +112,64 @@
     .view[hidden], .dock[hidden], .more[hidden] { display: none; }
     @keyframes rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 
-    /* 업로드 카드 */
-    .drops { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+    /* 업로드 화면: 데스크톱 기준, 본문 15px · 보조 13px · 모서리 12px 이하 */
+    #upload-view { font-size: 15px; color: var(--ink); }
+    #upload-view h1 { font-size: 24px; line-height: 1.4; letter-spacing: -.02em; margin: 0 0 8px; }
+    #upload-view .lead { font-size: 15px; color: var(--gray-2); margin: 0 0 28px; letter-spacing: 0; }
+
+    .drops { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
     .drop {
-      position: relative; display: flex; align-items: center; gap: 16px;
-      padding: 20px; border-radius: var(--radius); background: var(--surface);
-      border: 1.5px solid transparent; cursor: pointer;
-      transition: background .2s var(--ease), border-color .2s var(--ease), transform .2s var(--ease);
+      position: relative; display: flex; align-items: center; gap: 12px;
+      padding: 16px; border-radius: 12px; background: var(--gray-1);
+      border: 1px solid transparent; cursor: pointer; transition: border-color .15s;
     }
-    .drop:hover { background: var(--surface-2); }
-    .drop:active { transform: scale(.985); }
-    .drop:focus-within { border-color: var(--blue); }
+    .drop:hover { border-color: var(--gray-2); }
+    .drop:focus-within { border-color: var(--accent); }
+    .drop.dragging { border-color: var(--accent); border-style: dashed; }
     .drop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
-    .drop.dragging { border-color: var(--blue); border-style: dashed; background: var(--blue-soft); }
-    .drop.filled { background: var(--bg); border-color: var(--line); }
-    .drop.filled:hover { background: var(--surface); }
-    .drop .icon {
-      width: 48px; height: 48px; border-radius: 14px; flex: none; display: grid; place-items: center;
-      background: var(--bg); color: var(--text-3); transition: background .25s, color .25s;
-    }
-    .drop.filled .icon { background: var(--blue-soft); color: var(--blue); }
-    .drop .icon svg { width: 24px; height: 24px; }
+    .drop .icon { flex: none; width: 20px; height: 20px; color: var(--gray-2); }
+    .drop.filled .icon { color: var(--accent); }
+    .drop .icon svg { width: 20px; height: 20px; display: block; }
     .drop .body { min-width: 0; flex: 1; }
     .drop .title, .drop .desc { display: block; }
-    .drop .title { font-weight: 600; font-size: 17px; letter-spacing: -.01em; }
-    .drop .desc { color: var(--text-3); font-size: 14px; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .drop.filled .desc { color: var(--text-2); }
+    .drop .title { font-weight: 600; font-size: 15px; }
+    .drop .desc { color: var(--gray-2); font-size: 13px; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .drop.filled .desc { color: var(--ink); }
     .drop .action {
-      flex: none; font-size: 14px; font-weight: 600; color: var(--blue); background: var(--blue-soft);
-      padding: 8px 14px; border-radius: 10px; position: relative; z-index: 1; pointer-events: none;
+      flex: none; font-size: 13px; font-weight: 600; color: var(--accent); background: var(--bg);
+      padding: 6px 12px; border-radius: 8px; position: relative; z-index: 1; pointer-events: none;
     }
-    .drop.filled .action { color: var(--text-2); background: var(--surface-2); }
     .drop .clear {
-      display: none; position: relative; z-index: 2; flex: none; width: 32px; height: 32px; border-radius: 50%;
-      border: 0; background: none; color: var(--text-3); cursor: pointer; place-items: center; margin-left: -8px;
+      display: none; position: relative; z-index: 2; flex: none; width: 28px; height: 28px; border-radius: 8px;
+      border: 0; background: none; color: var(--gray-2); cursor: pointer; place-items: center; margin-left: -4px;
     }
     .drop.filled .clear { display: grid; }
-    .drop .clear:hover { background: var(--surface-2); color: var(--text); }
-    .drop .clear svg { width: 18px; height: 18px; }
+    .drop .clear:hover { color: var(--ink); }
+    .drop .clear:focus-visible { outline: 2px solid var(--accent); }
+    .drop .clear svg { width: 16px; height: 16px; }
 
-    .hint { display: flex; gap: 8px; align-items: flex-start; color: var(--text-3); font-size: 14px; margin: 20px 4px 0; }
-    .hint svg { flex: none; width: 16px; height: 16px; margin-top: 2px; }
+    .start {
+      display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 52px; margin-top: 16px;
+      border: 0; border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer;
+      background: var(--accent); color: #fff; transition: background .2s, color .2s, opacity .2s;
+    }
+    .start:hover:not(:disabled) { opacity: .9; }
+    .start:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .start:disabled { background: var(--gray-1); color: var(--gray-2); cursor: default; }
+    .start.loading:disabled { background: var(--accent); color: #fff; }
+
+    .hint { display: flex; gap: 6px; align-items: flex-start; color: var(--gray-2); font-size: 13px; margin: 12px 0 0; }
+    .hint svg { flex: none; width: 14px; height: 14px; margin-top: 2px; }
 
     .alert {
-      display: flex; gap: 12px; align-items: flex-start; margin-top: 16px; padding: 16px 18px;
-      border-radius: 16px; background: var(--red-soft); color: var(--text); font-size: 15px;
+      display: flex; gap: 10px; align-items: flex-start; margin-top: 12px; padding: 14px 16px;
+      border-radius: 12px; background: var(--gray-1); color: var(--ink);
       animation: shake .4s var(--ease);
     }
     .alert[hidden] { display: none; }
-    .alert svg { flex: none; width: 20px; height: 20px; color: var(--red); margin-top: 1px; }
-    .alert strong { display: block; font-weight: 600; margin-bottom: 2px; }
-    .alert span { color: var(--text-2); }
+    .alert svg { flex: none; width: 18px; height: 18px; color: var(--ink); margin-top: 1px; }
+    .alert strong { display: block; font-weight: 600; font-size: 15px; margin-bottom: 2px; }
+    .alert span { color: var(--gray-2); font-size: 13px; }
     @keyframes shake { 0%, 100% { transform: none; } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
 
     /* 하단 고정 버튼 */
@@ -153,7 +178,7 @@
       padding: 16px 24px calc(20px + env(safe-area-inset-bottom));
       background: linear-gradient(to top, var(--bg) 70%, transparent);
     }
-    .dock-inner { max-width: 552px; margin: 0 auto; display: flex; gap: 8px; }
+    .dock-inner { max-width: 560px; margin: 0 auto; display: flex; gap: 8px; }
     .btn {
       flex: 1; height: 56px; border: 0; border-radius: 16px; font-size: 17px; font-weight: 600;
       letter-spacing: -.01em; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
@@ -273,19 +298,19 @@
 
   <!-- 1. 업로드 -->
   <section class="view" id="upload-view">
-    <h1>두 파일만 올리면<br>정산 대사가 끝나요</h1>
-    <p class="lead">은행 거래내역과 매출 장부를 비교해서 맞는 건, 안 맞는 건, 확인할 건으로 나눠 드릴게요.</p>
+    <h1>두 파일을 올리면 맞는 건과<br>확인할 건을 나눠 드려요</h1>
+    <p class="lead">은행 거래내역과 매출 장부를 각각 골라 주세요.</p>
 
     <form id="form" action="/match" method="post" enctype="multipart/form-data">
       <div class="drops">
         <label class="drop" data-slot="bank">
           <input id="bank" name="bank" type="file" accept=".csv,.xlsx,.xls" required>
           <span class="icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-6 9 6"/><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8"/><path d="M3 20h18"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-6 9 6"/><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8"/><path d="M3 20h18"/></svg>
           </span>
           <span class="body">
             <span class="title">은행 거래내역</span>
-            <span class="desc" data-empty="CSV, XLSX, XLS 파일">CSV, XLSX, XLS 파일</span>
+            <span class="desc" data-empty="CSV, XLSX 파일">CSV, XLSX 파일</span>
           </span>
           <span class="action" data-empty="파일 선택" data-filled="변경">파일 선택</span>
           <button class="clear" type="button" aria-label="은행 거래내역 파일 지우기">
@@ -296,11 +321,11 @@
         <label class="drop" data-slot="ledger">
           <input id="ledger" name="ledger" type="file" accept=".csv,.xlsx,.xls" required>
           <span class="icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5"/><path d="M9 12h7M9 16h7"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5"/><path d="M9 12h7M9 16h7"/></svg>
           </span>
           <span class="body">
             <span class="title">매출 장부</span>
-            <span class="desc" data-empty="CSV, XLSX, XLS 파일">CSV, XLSX, XLS 파일</span>
+            <span class="desc" data-empty="CSV, XLSX 파일">CSV, XLSX 파일</span>
           </span>
           <span class="action" data-empty="파일 선택" data-filled="변경">파일 선택</span>
           <button class="clear" type="button" aria-label="매출 장부 파일 지우기">
@@ -308,6 +333,8 @@
           </button>
         </label>
       </div>
+
+      <button class="start" id="submit" type="submit" disabled>파일 두 개를 선택해 주세요</button>
 
       <div class="alert" id="error" role="alert" hidden>
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 5.5a1.2 1.2 0 011.2 1.2v4.1a1.2 1.2 0 01-2.4 0V8.7A1.2 1.2 0 0112 7.5zm0 10.3a1.35 1.35 0 110-2.7 1.35 1.35 0 010 2.7z"/></svg>
@@ -361,11 +388,6 @@
     </div>
   </section>
 
-  <div class="dock" id="upload-dock">
-    <div class="dock-inner">
-      <button class="btn btn-primary" id="submit" type="submit" form="form" disabled>대사 시작하기</button>
-    </div>
-  </div>
     <div class="dock" id="result-dock" hidden>
     <div class="dock-inner">
       <button class="btn btn-secondary" id="again" type="button">새로 대사</button>
@@ -451,7 +473,7 @@
   }
   const assigned = new Set();
   function assign(slot, file) {
-    if (!OK_EXT.test(file.name)) return showError(`‘${file.name}’은(는) 열 수 없는 형식이에요. CSV, XLSX, XLS 파일을 올려주세요.`);
+    if (!OK_EXT.test(file.name)) return showError(`‘${file.name}’은(는) 열 수 없는 형식이에요. CSV 또는 XLSX 파일을 올려 주세요.`);
     if (file.size > MAX_BYTES) return showError(`‘${file.name}’이(가) 20MB보다 커요. 파일을 나눠서 올려주세요.`);
     const dt = new DataTransfer(); dt.items.add(file);
     slots[slot].input.files = dt.files;
@@ -470,8 +492,13 @@
     action.textContent = file ? action.dataset.filled : action.dataset.empty;
     if (file) { icon.dataset.orig ??= icon.innerHTML; icon.replaceChildren(svg(CHECK)); }
     else if (icon.dataset.orig) icon.innerHTML = icon.dataset.orig;
-    submit.disabled = !(slots.bank.input.files.length && slots.ledger.input.files.length);
+    updateSubmit();
     hideError();
+  }
+  function updateSubmit() {
+    const ready = !!(slots.bank.input.files.length && slots.ledger.input.files.length);
+    submit.disabled = !ready;
+    submit.textContent = ready ? '대사 시작하기' : '파일 두 개를 선택해 주세요';
   }
   const size = b => b < 1024 ? `${b}B` : b < 1048576 ? `${(b / 1024).toFixed(0)}KB` : `${(b / 1048576).toFixed(1)}MB`;
 
@@ -488,6 +515,7 @@
     hideError();
     form.classList.add('busy');
     submit.disabled = true;
+    submit.classList.add('loading');
     submit.replaceChildren(h('span', { class: 'spinner', 'aria-hidden': 'true' }), '대사하는 중이에요');
     try {
       const res = await fetch('/api/match', { method: 'POST', body: new FormData(form) });
@@ -498,8 +526,8 @@
       showError(err instanceof TypeError ? '프로그램이 실행 중인지 확인해 주세요.' : err.message);
     } finally {
       form.classList.remove('busy');
-      submit.textContent = '대사 시작하기';
-      submit.disabled = !(slots.bank.input.files.length && slots.ledger.input.files.length);
+      submit.classList.remove('loading');
+      updateSubmit();
     }
   });
 
@@ -557,7 +585,6 @@
     blobUrl = null;
 
     $('#upload-view').hidden = true;
-    $('#upload-dock').hidden = true;
     $('#result-view').hidden = false;
     $('#result-dock').hidden = false;
     $('#restart').hidden = false;
@@ -669,7 +696,6 @@
     $('#result-view').hidden = true;
     $('#result-dock').hidden = true;
     $('#upload-view').hidden = false;
-    $('#upload-dock').hidden = false;
     $('#restart').hidden = true;
     window.scrollTo({ top: 0 });
   }
