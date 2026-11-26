@@ -6,7 +6,7 @@
 ## 실행
 
 ```powershell
-$env:JAVA_HOME = "C:\Program Files\Eclipse Adoptium\jdk-21.0.13.10002-hotspot"
+$env:JAVA_HOME = "<JDK 21 설치 폴더>"   # JAVA_HOME을 JDK 21 설치 폴더로 지정
 .\mvnw.cmd package
 java -jar target\settlement-matcher-0.0.1-SNAPSHOT.jar
 ```
