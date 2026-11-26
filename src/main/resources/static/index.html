@@ -316,7 +316,7 @@
           </span>
           <span class="body">
             <span class="title">은행 거래내역</span>
-            <span class="desc" data-empty="CSV, XLSX 파일">CSV, XLSX 파일</span>
+            <span class="desc" data-empty="CSV, XLSX, XLS 파일">CSV, XLSX, XLS 파일</span>
           </span>
           <span class="action" data-empty="파일 선택" data-filled="변경">파일 선택</span>
           <button class="clear" type="button" aria-label="은행 거래내역 파일 지우기">
@@ -331,7 +331,7 @@
           </span>
           <span class="body">
             <span class="title">매출 장부</span>
-            <span class="desc" data-empty="CSV, XLSX 파일">CSV, XLSX 파일</span>
+            <span class="desc" data-empty="CSV, XLSX, XLS 파일">CSV, XLSX, XLS 파일</span>
           </span>
           <span class="action" data-empty="파일 선택" data-filled="변경">파일 선택</span>
           <button class="clear" type="button" aria-label="매출 장부 파일 지우기">
@@ -479,7 +479,7 @@
   }
   const assigned = new Set();
   function assign(slot, file) {
-    if (!OK_EXT.test(file.name)) return showError(`‘${file.name}’은(는) 열 수 없는 형식이에요. CSV 또는 XLSX 파일을 올려 주세요.`);
+    if (!OK_EXT.test(file.name)) return showError(`‘${file.name}’은(는) 열 수 없는 형식이에요. CSV, XLSX, XLS 파일을 올려 주세요.`);
     if (file.size > MAX_BYTES) return showError(`‘${file.name}’이(가) 20MB보다 커요. 파일을 나눠서 올려주세요.`);
     const dt = new DataTransfer(); dt.items.add(file);
     slots[slot].input.files = dt.files;

@@ -134,6 +134,12 @@ class SampleDataMatchTest {
     }
 
     @Test
+    void xls_샘플도_CSV와_같은_행을_읽는다() throws Exception {
+        assertThat(parseBank("가상데이터_은행거래내역_2026-10.xls").items()).isEqualTo(bank.items());
+        assertThat(parseLedger("가상데이터_매출장부_2026-10.xls").items()).isEqualTo(ledger.items());
+    }
+
+    @Test
     void 계좌정보_제목행과_합계행이_있는_xlsx도_끝까지_처리된다() throws Exception {
         Parsed<BankTxn> withTitle = parseBank("가상데이터_은행거래내역_2026-10_계좌정보포함.xlsx");
         // 제목 3줄 + 머리글 1줄 아래로 데이터 26행(5~30행), 31행이 합계

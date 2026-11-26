@@ -31,6 +31,7 @@ class MatchControllerTest {
     @CsvSource({
             "가상데이터_은행거래내역_2026-10.csv, 가상데이터_매출장부_2026-10.csv, 26, -",
             "가상데이터_은행거래내역_2026-10.xlsx, 가상데이터_매출장부_2026-10.xlsx, 26, -",
+            "가상데이터_은행거래내역_2026-10.xls, 가상데이터_매출장부_2026-10.xls, 26, -",
             "가상데이터_은행거래내역_2026-10_계좌정보포함.xlsx, 가상데이터_매출장부_2026-10.csv, 27, 31",
     })
     void 요약_시트_건수_합이_원본_데이터_행과_맞다(String bankFile, String ledgerFile, int bankDataRows,
